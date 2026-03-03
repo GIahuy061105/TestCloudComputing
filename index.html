@@ -1,46 +1,128 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-    <title>Cloud Game Demo</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Pro Catcher - Fixed</title>
     <style>
-        body { margin: 0; background: #222; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; font-family: sans-serif; overflow: hidden; }
-        canvas { border: 2px solid #fff; background: #000; cursor: none; }
+        body { margin: 0; background: #0f172a; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: #f8fafc; font-family: 'Inter', sans-serif; overflow: hidden; }
+        .ui-panel { position: absolute; top: 20px; display: flex; gap: 40px; font-size: 20px; font-weight: 600; letter-spacing: 1px; }
+        canvas { border: 2px solid #334155; border-radius: 12px; background: #020617; box-shadow: 0 20px 50px rgba(0,0,0,0.5); cursor: none; }
+        #overlay { position: absolute; text-align: center; background: rgba(15, 23, 42, 0.95); padding: 40px; border-radius: 20px; border: 1px solid #38bdf8; box-shadow: 0 0 30px rgba(56, 189, 248, 0.2); }
+        button { background: #38bdf8; border: none; padding: 12px 30px; color: #020617; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
+        button:hover { background: #7dd3fc; transform: translateY(-2px); }
+        .hidden { display: none; }
+        #score { color: #38bdf8; }
+        #highScore { color: #fbbf24; }
     </style>
 </head>
 <body>
-    <div style="position: absolute; top: 10px;">Score: <span id="score">0</span></div>
+    <div class="ui-panel">
+        <div>SCORE: <span id="score">0</span></div>
+        <div>BEST: <span id="highScore">0</span></div>
+    </div>
+
     <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+    <div id="overlay">
+        <h1 id="statusTitle">ORB CATCHER</h1>
+        <p id="finalScore" class="hidden"></p>
+        <button onclick="startGame()">Bắt đầu chơi</button>
+    </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const highScoreEl = document.getElementById('highScore');
+        const overlay = document.getElementById('overlay');
+        const statusTitle = document.getElementById('statusTitle');
+        const finalScore = document.getElementById('finalScore');
+
         let score = 0;
-        let ball = { x: 200, y: 0, speed: 5 };
-        let paddle = { x: 150, width: 100, height: 10 };
+        let best = localStorage.getItem('cloudBest') || 0;
+        let gameActive = false;
+        let shakeTime = 0; // Biến điều khiển hiệu ứng rung
+        highScoreEl.innerText = best;
+
+        // Cấu hình màu sắc khác nhau để dễ nhìn
+        let ball = { x: 200, y: -20, radius: 10, speed: 4, color: '#fbbf24' }; // Bóng màu Vàng
+        let paddle = { x: 150, width: 90, height: 12, color: '#38bdf8' };    // Thanh màu Xanh
 
         canvas.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
             paddle.x = e.clientX - rect.left - paddle.width / 2;
+            if (paddle.x < 0) paddle.x = 0;
+            if (paddle.x > canvas.width - paddle.width) paddle.x = canvas.width - paddle.width;
         });
 
+        function startGame() {
+            score = 0; ball.y = -20; ball.speed = 4;
+            scoreEl.innerText = "0";
+            gameActive = true;
+            overlay.classList.add('hidden');
+        }
+
+        function gameOver() {
+            gameActive = false;
+            overlay.classList.remove('hidden');
+            statusTitle.innerText = "KẾT THÚC";
+            finalScore.innerText = `Điểm của bạn: ${score}`;
+            finalScore.classList.remove('hidden');
+            if (score > best) {
+                best = score;
+                localStorage.setItem('cloudBest', best);
+                highScoreEl.innerText = best;
+            }
+        }
+
         function update() {
+            if (!gameActive) return;
             ball.y += ball.speed;
-            if (ball.y > canvas.height) { // Game Over reset
-                ball.y = 0; ball.x = Math.random() * canvas.width; score = 0; ball.speed = 5;
-            }
-            // Kiểm tra va chạm với thanh hứng
-            if (ball.y + 10 > canvas.height - 20 && ball.x > paddle.x && ball.x < paddle.x + paddle.width) {
+
+            if (ball.y > canvas.height) gameOver();
+
+            // Va chạm
+            if (ball.y + ball.radius > canvas.height - 30 && 
+                ball.x > paddle.x && ball.x < paddle.x + paddle.width) {
                 score++;
-                ball.y = 0; ball.x = Math.random() * canvas.width;
-                ball.speed += 0.5; // Khó dần
+                ball.y = -20;
+                ball.x = Math.random() * (canvas.width - 40) + 20;
+                ball.speed += 0.3;
+                scoreEl.innerText = score;
+                shakeTime = 10; // Kích hoạt rung màn hình trong 10 khung hình
             }
-            document.getElementById('score').innerText = score;
         }
 
         function draw() {
+            ctx.save();
+            // Hiệu ứng rung màn hình thay vì nháy sáng
+            if (shakeTime > 0) {
+                ctx.translate(Math.random() * 4 - 2, Math.random() * 4 - 2);
+                shakeTime--;
+            }
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(ball.x, ball.y, 10, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = 'cyan'; ctx.fillRect(paddle.x, canvas.height - 20, paddle.width, paddle.height);
+            
+            if (gameActive) {
+                // Vẽ bóng
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fillStyle = ball.color;
+                ctx.fill();
+                ctx.closePath();
+
+                // Vẽ thanh hứng
+                ctx.fillStyle = paddle.color;
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(paddle.x, canvas.height - 30, paddle.width, paddle.height, 6);
+                } else {
+                    ctx.rect(paddle.x, canvas.height - 30, paddle.width, paddle.height);
+                }
+                ctx.fill();
+            }
+            ctx.restore();
             update();
             requestAnimationFrame(draw);
         }
