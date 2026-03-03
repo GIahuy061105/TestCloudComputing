@@ -3,13 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cloud Pro Catcher - Mobile Ready</title>
+    <title>Cloud Pro Catcher - Fixed</title>
     <style>
         body { margin: 0; background: #0f172a; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: #f8fafc; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        
+        /* QUAN TRỌNG: Thêm dòng này để ẩn phần tử */
+        .hidden { display: none !important; }
+
         .ui-panel { position: absolute; top: 10px; display: flex; gap: 30px; font-size: 18px; font-weight: bold; z-index: 10; }
-        canvas { border: 2px solid #334155; background: #020617; max-width: 95vw; max-height: 80vh; touch-action: none; }
-        #overlay { position: absolute; text-align: center; background: rgba(15, 23, 42, 0.9); padding: 30px; border-radius: 20px; border: 1px solid #38bdf8; z-index: 20; width: 80%; max-width: 300px; }
-        button { background: #38bdf8; border: none; padding: 15px 30px; color: #020617; font-size: 18px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; }
+        canvas { border: 2px solid #334155; background: #020617; max-width: 95vw; max-height: 80vh; touch-action: none; border-radius: 8px; }
+        
+        #overlay { 
+            position: absolute; 
+            text-align: center; 
+            background: rgba(15, 23, 42, 0.95); 
+            padding: 30px; 
+            border-radius: 20px; 
+            border: 1px solid #38bdf8; 
+            z-index: 20; 
+            width: 80%; 
+            max-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        button { 
+            background: #38bdf8; 
+            border: none; 
+            padding: 15px 30px; 
+            color: #020617; 
+            font-size: 18px; 
+            font-weight: bold; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.95); }
+        
         #score { color: #38bdf8; }
         #highScore { color: #fbbf24; }
     </style>
@@ -23,8 +54,8 @@
     <canvas id="gameCanvas" width="400" height="600"></canvas>
 
     <div id="overlay">
-        <h2 id="statusTitle">ORB CATCHER</h2>
-        <p id="finalScore" class="hidden"></p>
+        <h2 id="statusTitle" style="margin: 0;">ORB CATCHER</h2>
+        <p id="finalScore" class="hidden" style="margin: 0; font-size: 20px; color: #fbbf24;"></p>
         <button onclick="startGame()">CHƠI NGAY</button>
     </div>
 
@@ -46,39 +77,40 @@
         let ball = { x: 200, y: -20, radius: 12, speed: 4, color: '#fbbf24' };
         let paddle = { x: 150, width: 100, height: 15, color: '#38bdf8' };
 
-        // XỬ LÝ ĐIỀU KHIỂN (Chuột + Cảm ứng)
         function movePaddle(clientX) {
             const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width; // Tính toán tỉ lệ nếu canvas bị co giãn
+            const scaleX = canvas.width / rect.width;
             paddle.x = (clientX - rect.left) * scaleX - paddle.width / 2;
-            
             if (paddle.x < 0) paddle.x = 0;
             if (paddle.x > canvas.width - paddle.width) paddle.x = canvas.width - paddle.width;
         }
 
-        // Sự kiện chuột
         canvas.addEventListener('mousemove', (e) => movePaddle(e.clientX));
-
-        // Sự kiện cảm ứng điện thoại
         canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault(); // Ngăn cuộn trang khi đang chơi
+            e.preventDefault();
             movePaddle(e.touches[0].clientX);
         }, { passive: false });
 
         function startGame() {
-            score = 0; ball.y = -20; ball.speed = 4;
+            score = 0; 
+            ball.y = -20; 
+            ball.speed = 4;
             scoreEl.innerText = "0";
             gameActive = true;
+            
+            // Ẩn toàn bộ bảng thông báo
             overlay.classList.add('hidden');
-            finalScore.classList.add('hidden');
         }
 
         function gameOver() {
             gameActive = false;
+            
+            // Hiện lại bảng thông báo
             overlay.classList.remove('hidden');
             statusTitle.innerText = "GAME OVER";
             finalScore.innerText = `Điểm: ${score}`;
             finalScore.classList.remove('hidden');
+            
             if (score > best) {
                 best = score;
                 localStorage.setItem('cloudBest', best);
