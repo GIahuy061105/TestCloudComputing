@@ -2,16 +2,14 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Pro Catcher - Fixed</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cloud Pro Catcher - Mobile Ready</title>
     <style>
-        body { margin: 0; background: #0f172a; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: #f8fafc; font-family: 'Inter', sans-serif; overflow: hidden; }
-        .ui-panel { position: absolute; top: 20px; display: flex; gap: 40px; font-size: 20px; font-weight: 600; letter-spacing: 1px; }
-        canvas { border: 2px solid #334155; border-radius: 12px; background: #020617; box-shadow: 0 20px 50px rgba(0,0,0,0.5); cursor: none; }
-        #overlay { position: absolute; text-align: center; background: rgba(15, 23, 42, 0.95); padding: 40px; border-radius: 20px; border: 1px solid #38bdf8; box-shadow: 0 0 30px rgba(56, 189, 248, 0.2); }
-        button { background: #38bdf8; border: none; padding: 12px 30px; color: #020617; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
-        button:hover { background: #7dd3fc; transform: translateY(-2px); }
-        .hidden { display: none; }
+        body { margin: 0; background: #0f172a; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: #f8fafc; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        .ui-panel { position: absolute; top: 10px; display: flex; gap: 30px; font-size: 18px; font-weight: bold; z-index: 10; }
+        canvas { border: 2px solid #334155; background: #020617; max-width: 95vw; max-height: 80vh; touch-action: none; }
+        #overlay { position: absolute; text-align: center; background: rgba(15, 23, 42, 0.9); padding: 30px; border-radius: 20px; border: 1px solid #38bdf8; z-index: 20; width: 80%; max-width: 300px; }
+        button { background: #38bdf8; border: none; padding: 15px 30px; color: #020617; font-size: 18px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; }
         #score { color: #38bdf8; }
         #highScore { color: #fbbf24; }
     </style>
@@ -25,9 +23,9 @@
     <canvas id="gameCanvas" width="400" height="600"></canvas>
 
     <div id="overlay">
-        <h1 id="statusTitle">ORB CATCHER</h1>
+        <h2 id="statusTitle">ORB CATCHER</h2>
         <p id="finalScore" class="hidden"></p>
-        <button onclick="startGame()">Bắt đầu chơi</button>
+        <button onclick="startGame()">CHƠI NGAY</button>
     </div>
 
     <script>
@@ -42,32 +40,44 @@
         let score = 0;
         let best = localStorage.getItem('cloudBest') || 0;
         let gameActive = false;
-        let shakeTime = 0; // Biến điều khiển hiệu ứng rung
+        let shakeTime = 0;
         highScoreEl.innerText = best;
 
-        // Cấu hình màu sắc khác nhau để dễ nhìn
-        let ball = { x: 200, y: -20, radius: 10, speed: 4, color: '#fbbf24' }; // Bóng màu Vàng
-        let paddle = { x: 150, width: 90, height: 12, color: '#38bdf8' };    // Thanh màu Xanh
+        let ball = { x: 200, y: -20, radius: 12, speed: 4, color: '#fbbf24' };
+        let paddle = { x: 150, width: 100, height: 15, color: '#38bdf8' };
 
-        canvas.addEventListener('mousemove', (e) => {
+        // XỬ LÝ ĐIỀU KHIỂN (Chuột + Cảm ứng)
+        function movePaddle(clientX) {
             const rect = canvas.getBoundingClientRect();
-            paddle.x = e.clientX - rect.left - paddle.width / 2;
+            const scaleX = canvas.width / rect.width; // Tính toán tỉ lệ nếu canvas bị co giãn
+            paddle.x = (clientX - rect.left) * scaleX - paddle.width / 2;
+            
             if (paddle.x < 0) paddle.x = 0;
             if (paddle.x > canvas.width - paddle.width) paddle.x = canvas.width - paddle.width;
-        });
+        }
+
+        // Sự kiện chuột
+        canvas.addEventListener('mousemove', (e) => movePaddle(e.clientX));
+
+        // Sự kiện cảm ứng điện thoại
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // Ngăn cuộn trang khi đang chơi
+            movePaddle(e.touches[0].clientX);
+        }, { passive: false });
 
         function startGame() {
             score = 0; ball.y = -20; ball.speed = 4;
             scoreEl.innerText = "0";
             gameActive = true;
             overlay.classList.add('hidden');
+            finalScore.classList.add('hidden');
         }
 
         function gameOver() {
             gameActive = false;
             overlay.classList.remove('hidden');
-            statusTitle.innerText = "KẾT THÚC";
-            finalScore.innerText = `Điểm của bạn: ${score}`;
+            statusTitle.innerText = "GAME OVER";
+            finalScore.innerText = `Điểm: ${score}`;
             finalScore.classList.remove('hidden');
             if (score > best) {
                 best = score;
@@ -79,10 +89,8 @@
         function update() {
             if (!gameActive) return;
             ball.y += ball.speed;
-
             if (ball.y > canvas.height) gameOver();
 
-            // Va chạm
             if (ball.y + ball.radius > canvas.height - 30 && 
                 ball.x > paddle.x && ball.x < paddle.x + paddle.width) {
                 score++;
@@ -90,37 +98,27 @@
                 ball.x = Math.random() * (canvas.width - 40) + 20;
                 ball.speed += 0.3;
                 scoreEl.innerText = score;
-                shakeTime = 10; // Kích hoạt rung màn hình trong 10 khung hình
+                shakeTime = 8;
             }
         }
 
         function draw() {
             ctx.save();
-            // Hiệu ứng rung màn hình thay vì nháy sáng
             if (shakeTime > 0) {
                 ctx.translate(Math.random() * 4 - 2, Math.random() * 4 - 2);
                 shakeTime--;
             }
-
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             if (gameActive) {
-                // Vẽ bóng
                 ctx.beginPath();
                 ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
                 ctx.fillStyle = ball.color;
                 ctx.fill();
                 ctx.closePath();
 
-                // Vẽ thanh hứng
                 ctx.fillStyle = paddle.color;
-                ctx.beginPath();
-                if (ctx.roundRect) {
-                    ctx.roundRect(paddle.x, canvas.height - 30, paddle.width, paddle.height, 6);
-                } else {
-                    ctx.rect(paddle.x, canvas.height - 30, paddle.width, paddle.height);
-                }
-                ctx.fill();
+                ctx.fillRect(paddle.x, canvas.height - 30, paddle.width, paddle.height);
             }
             ctx.restore();
             update();
